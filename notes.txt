@@ -1,0 +1,2 @@
+Building the make file: cmake -B build
+Compiling: cmake --build build
