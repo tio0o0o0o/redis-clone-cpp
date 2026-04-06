@@ -1,9 +1,10 @@
+#include "../include/logger.h"
 #include <cstdlib>
 #include <cstring>
 #include <netdb.h>
-#include <spdlog/spdlog.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <unistd.h>
 
 int main() {
   struct addrinfo hints;
@@ -14,13 +15,13 @@ int main() {
   struct addrinfo *res;
 
   if (getaddrinfo(NULL, "6969", &hints, &res) != 0) {
-    spdlog::error("Address not found");
+    LOG_ERROR("Address not found");
   };
 
   int sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
 
   if (connect(sockfd, res->ai_addr, res->ai_addrlen) == -1) {
-    spdlog::error("Connection failed");
+    LOG_ERROR("Connection failed");
   };
 
   char buffer[1024];
@@ -30,7 +31,7 @@ int main() {
   send(sockfd, buffer, sizeof(buffer), 0);
 
   read(sockfd, buffer, 1024);
-  spdlog::info(buffer);
+  LOG_INFO(buffer);
 
   freeaddrinfo(res);
 

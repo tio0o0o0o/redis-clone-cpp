@@ -1,8 +1,9 @@
+#include "../include/logger.h"
 #include <cstring>
 #include <netdb.h>
-#include <spdlog/spdlog.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <unistd.h>
 
 int main() {
   struct addrinfo hints;
@@ -13,47 +14,47 @@ int main() {
   hints.ai_socktype = SOCK_STREAM;
 
   if (getaddrinfo(NULL, "6969", &hints, &res) != 0) {
-    spdlog::error("Address not found");
+    LOG_ERROR("Address not found");
     return 1;
   };
 
   int sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
 
   if (sockfd == -1) {
-    spdlog::error("Could not create socket");
+    LOG_ERROR("Could not create socket");
     return 1;
   }
 
   if (bind(sockfd, res->ai_addr, res->ai_addrlen) != 0) {
-    spdlog::error("Could not bind address to socket");
+    LOG_ERROR("Could not bind address to socket");
     return 1;
   };
 
   freeaddrinfo(res);
 
   if (listen(sockfd, 10) != 0) {
-    spdlog::error("Could not start listening for connctions");
+    LOG_ERROR("Could not start listening for connctions");
     return 1;
   };
 
-  spdlog::info("Server listening");
+  LOG_INFO("Server listening");
 
   char buffer[2048];
 
   while (true) {
     int fd = accept(sockfd, NULL, NULL);
     if (fd == -1) {
-      spdlog::error("Could not accept connection");
+      LOG_ERROR("Could not accept connection");
       return 1;
     }
     int code = read(fd, buffer, 2048);
-    spdlog::info(buffer);
+    LOG_INFO(buffer);
     memset(buffer, 0, 2048);
     write(fd, "Hello, Client", 13);
     if (code == 0) {
-      spdlog::warn("Connection closed");
+      LOG_INFO("Connection closed");
     } else if (code == -1) {
-      spdlog::error("Failed to read fd");
+      LOG_ERROR("Failed to read fd");
       return 1;
     }
     close(fd);
