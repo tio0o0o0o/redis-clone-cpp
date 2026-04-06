@@ -147,30 +147,39 @@ RespValue parse_failed() {
   return output;
 }
 
-RespValue parse(std::string input) {
+ParseResult parse(std::string input) {
+  ParseResult result;
+  result.consumed = input.length();
   switch (input[0]) {
   case '$':
     if (input[1] == '-') {
-      return parse_null();
+      result.resp_value = parse_null();
+      return result;
     } else {
-      return parse_bulk_string(input);
+      result.resp_value = parse_bulk_string(input);
+      return result;
     }
     break;
   case '+':
-    return parse_simple_string(input);
+    result.resp_value = parse_simple_string(input);
+    return result;
     break;
   case '-':
-    return parse_error(input);
+    result.resp_value = parse_error(input);
+    return result;
     break;
   case ':':
-    return parse_integer(input);
+    result.resp_value = parse_integer(input);
+    return result;
     break;
   case '*':
-    return parse_array(input);
+    result.resp_value = parse_array(input);
+    return result;
     break;
   default:
     LOG_ERROR("Couldn't pass");
-    return parse_failed();
+    result.resp_value = parse_failed();
+    return result;
     break;
   }
 }

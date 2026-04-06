@@ -86,35 +86,46 @@ TEST(RESP2Parsing, Parse) {
   std::string array_encoded = "*3\r\n$1\r\nI\r\n$4\r\nLike\r\n$4\r\nFood\r\n";
   std::string null_encoded = "$-1\r\n";
 
-  RespValue bulk_string_parsed = parse(bulk_string_encoded);
-  RespValue simple_string_parsed = parse(simple_string_encoded);
-  RespValue error_parsed = parse(error_encoded);
-  RespValue integer_parsed = parse(integer_encoded);
-  RespValue array_parsed = parse(array_encoded);
-  RespValue null_parsed = parse(null_encoded);
-  RespValue fail_parsed = parse("wronginput");
+  ParseResult bulk_string_parsed = parse(bulk_string_encoded);
+  ParseResult simple_string_parsed = parse(simple_string_encoded);
+  ParseResult error_parsed = parse(error_encoded);
+  ParseResult integer_parsed = parse(integer_encoded);
+  ParseResult array_parsed = parse(array_encoded);
+  ParseResult null_parsed = parse(null_encoded);
+  ParseResult fail_parsed = parse("wronginput");
 
-  EXPECT_EQ(std::get<std::string>(bulk_string_parsed.value), "Foo Bar");
-  EXPECT_EQ(bulk_string_parsed.type, bulk_string);
-  EXPECT_EQ(std::get<std::string>(simple_string_parsed.value), "My ss");
-  EXPECT_EQ(simple_string_parsed.type, simple_string);
-  EXPECT_EQ(std::get<std::string>(error_parsed.value), "My error");
-  EXPECT_EQ(error_parsed.type, error);
-  EXPECT_EQ(std::get<std::string>(integer_parsed.value), "67");
-  EXPECT_EQ(integer_parsed.type, integer);
+  EXPECT_EQ(std::get<std::string>(bulk_string_parsed.resp_value.value),
+            "Foo Bar");
+  EXPECT_EQ(bulk_string_parsed.resp_value.type, bulk_string);
+  EXPECT_EQ(std::get<std::string>(simple_string_parsed.resp_value.value),
+            "My ss");
+  EXPECT_EQ(simple_string_parsed.resp_value.type, simple_string);
+  EXPECT_EQ(std::get<std::string>(error_parsed.resp_value.value), "My error");
+  EXPECT_EQ(error_parsed.resp_value.type, error);
+  EXPECT_EQ(std::get<std::string>(integer_parsed.resp_value.value), "67");
+  EXPECT_EQ(integer_parsed.resp_value.type, integer);
 
   std::vector<std::shared_ptr<RespValue>> values_vec =
-      std::get<std::vector<std::shared_ptr<RespValue>>>(array_parsed.value);
+      std::get<std::vector<std::shared_ptr<RespValue>>>(
+          array_parsed.resp_value.value);
   EXPECT_EQ(std::get<std::string>(values_vec[0]->value), "I");
   EXPECT_EQ(std::get<std::string>(values_vec[1]->value), "Like");
   EXPECT_EQ(std::get<std::string>(values_vec[2]->value), "Food");
   EXPECT_EQ(values_vec[0]->type, bulk_string);
   EXPECT_EQ(values_vec[1]->type, bulk_string);
   EXPECT_EQ(values_vec[2]->type, bulk_string);
-  EXPECT_EQ(array_parsed.type, array);
+  EXPECT_EQ(array_parsed.resp_value.type, array);
 
-  EXPECT_EQ(std::get<std::string>(null_parsed.value), "");
-  EXPECT_EQ(null_parsed.type, null);
-  EXPECT_EQ(std::get<std::string>(fail_parsed.value), "");
-  EXPECT_EQ(fail_parsed.type, failed);
+  EXPECT_EQ(std::get<std::string>(null_parsed.resp_value.value), "");
+  EXPECT_EQ(null_parsed.resp_value.type, null);
+  EXPECT_EQ(std::get<std::string>(fail_parsed.resp_value.value), "");
+  EXPECT_EQ(fail_parsed.resp_value.type, failed);
+
+  EXPECT_EQ(bulk_string_parsed.consumed, 13);
+  EXPECT_EQ(simple_string_parsed.consumed, 8);
+  EXPECT_EQ(error_parsed.consumed, 11);
+  EXPECT_EQ(integer_parsed.consumed, 5);
+  EXPECT_EQ(array_parsed.consumed, 31);
+  EXPECT_EQ(null_parsed.consumed, 5);
+  EXPECT_EQ(fail_parsed.consumed, 10);
 }

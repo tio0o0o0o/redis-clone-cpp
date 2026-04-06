@@ -24,6 +24,12 @@ public:
       value;
 };
 
+class ParseResult {
+public:
+  RespValue resp_value;
+  size_t consumed;
+};
+
 std::string encode_simple_string(std::string input);
 std::string encode_error(std::string input);
 std::string encode_integer(std::string input);
@@ -38,4 +44,4 @@ RespValue parse_error(std::string input);
 RespValue parse_array(std::string input);
 RespValue parse_null();
 RespValue parse_failed();
-RespValue parse(std::string input);
+ParseResult parse(std::string input);
