@@ -16,15 +16,24 @@ int Client::create() {
   int getaddrinfo_res = getaddrinfo(ip.empty() ? "127.0.0.1" : ip.c_str(),
                                     port.c_str(), &hints, &res);
 
-  std::cout << "getaddrinfo_res: " << getaddrinfo_res << '\n';
+  if (getaddrinfo_res == -1) {
+    LOG_ERROR("Failed to run getaddrinfo");
+    return -1;
+  }
 
   fd = ::socket(res->ai_family, res->ai_socktype, res->ai_protocol);
 
-  std::cout << "fd: " << fd << '\n';
+  if (fd == -1) {
+    LOG_ERROR("Failed to create socket");
+    return -1;
+  }
 
   int connect_res = connect(fd, res->ai_addr, res->ai_addrlen);
 
-  std::cout << "connect_res: " << connect_res << '\n';
+  if (connect_res == -1) {
+    LOG_ERROR("Failed to connect");
+    return -1;
+  }
 
   freeaddrinfo(res);
 

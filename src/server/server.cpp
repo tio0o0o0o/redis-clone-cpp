@@ -17,19 +17,33 @@ int Server::create() {
   int getaddrinfo_res = getaddrinfo(ip.empty() ? nullptr : ip.c_str(),
                                     port.c_str(), &hints, &res);
 
-  std::cout << "getaddrinfo_res: " << getaddrinfo_res << '\n';
+  if (getaddrinfo_res == -1) {
+    LOG_ERROR("Failed to run getaddrinfo");
+    return -1;
+  }
 
   fd = ::socket(res->ai_family, res->ai_socktype, res->ai_protocol);
 
-  std::cout << "fd: " << fd << '\n';
+  if (fd == -1) {
+    LOG_ERROR("Failed to create socket");
+    return -1;
+  }
 
   int bind_res = bind(fd, res->ai_addr, res->ai_addrlen);
 
-  std::cout << "bind_res: " << bind_res << '\n';
+  if (fd == -1) {
+    LOG_ERROR("Failed to bind to socket");
+    return -1;
+  }
 
   freeaddrinfo(res);
 
   int listen_res = listen(fd, backlog);
+
+  if (fd == -1) {
+    LOG_ERROR("Failed to run listen");
+    return -1;
+  }
 
   LOG_INFO("Server listening");
 
@@ -38,6 +52,11 @@ int Server::create() {
 
 int Server::accept() {
   int client_fd = ::accept(fd, NULL, NULL);
+
+  if (client_fd == -1) {
+    LOG_ERROR("Failed to accept client");
+    return -1;
+  }
 
   return client_fd;
 }
