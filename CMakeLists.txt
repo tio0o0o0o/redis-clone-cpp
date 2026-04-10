@@ -28,10 +28,6 @@ FetchContent_MakeAvailable(googletest)
 include_directories(include)
 
 # Main binary
-add_executable(server
-  playground/servertest.cpp
-)
-
 add_executable(client
   playground/clienttest.cpp
 )
@@ -39,6 +35,23 @@ add_executable(client
 add_library(resp2
   src/common/resp2.cpp
 )
+
+add_library(net
+  src/common/socket.cpp 
+  src/server/server.cpp 
+  src/client/client.cpp 
+)
+
+add_executable(newclient
+  playground/newclient.cpp
+)
+
+add_executable(newserver
+  playground/newserver.cpp
+)
+
+target_link_libraries(newclient PRIVATE net)
+target_link_libraries(newserver PRIVATE net)
 
 # Testing binary
 enable_testing()

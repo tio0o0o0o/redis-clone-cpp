@@ -39,6 +39,8 @@ int main() {
 
   LOG_INFO("Server listening");
 
+  // Server creation end
+
   char buffer[2048];
 
   while (true) {

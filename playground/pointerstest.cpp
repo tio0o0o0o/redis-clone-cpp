@@ -1,8 +1,15 @@
+#include "../include/client.h"
+#include "../include/server.h"
 #include <iostream>
 
 int main() {
-  int x = 10;
-  int *ptr = &x;
-  std::cout << ptr << " " << &x; // Should print out 0x.....
+  Server server = Server("", "6969", 10);
+  Client client = Client("", "6969");
+  int server_fd = server.create();
+  client.create();
+  int client_fd = server.accept();
+  server.send(client_fd, "Hello, Client!");
+  std::string output = client.read(20);
+  std::cout << output;
   return 0;
 }
