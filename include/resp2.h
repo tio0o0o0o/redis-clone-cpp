@@ -13,7 +13,8 @@ enum RespType {
   bulk_string,
   array,
   null,
-  failed
+  failed,
+  incomplete
 };
 
 class RespValue {
@@ -27,21 +28,22 @@ public:
 class ParseResult {
 public:
   RespValue resp_value;
-  size_t consumed;
+  ssize_t consumed;
 };
 
-std::string encode_simple_string(std::string input);
-std::string encode_error(std::string input);
-std::string encode_integer(std::string input);
-std::string encode_bulk_string(std::string input);
-std::string encode_array(std::vector<std::string> input);
+std::string encode_simple_string(std::string_view input);
+std::string encode_error(std::string_view input);
+std::string encode_integer(std::string_view input);
+std::string encode_bulk_string(std::string_view input);
+std::string encode_array(std::vector<std::string_view> input);
 std::string encode_null();
 
-RespValue parse_simple_string(std::string input);
-RespValue parse_bulk_string(std::string input);
-RespValue parse_integer(std::string input);
-RespValue parse_error(std::string input);
-RespValue parse_array(std::string input);
-RespValue parse_null();
-RespValue parse_failed();
-ParseResult parse(std::string input);
+ParseResult parse_simple_string(std::string_view input);
+ParseResult parse_bulk_string(std::string_view input);
+ParseResult parse_integer(std::string_view input);
+ParseResult parse_error(std::string_view input);
+ParseResult parse_array(std::string_view input);
+ParseResult parse_null();
+ParseResult parse_failed();
+ParseResult parse_incomplete();
+ParseResult parse(std::string_view input);

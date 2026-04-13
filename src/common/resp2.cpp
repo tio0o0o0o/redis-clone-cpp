@@ -1,8 +1,11 @@
 #include "../../include/resp2.h"
 #include "../../include/logger.h"
+#include <charconv>
+#include <execution>
 #include <fmt/base.h>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <variant>
 #include <vector>
 
@@ -28,158 +31,246 @@ std::string encode_array(std::vector<std::string> input) {
 
 std::string encode_null() { return "$-1\r\n"; }
 
-RespValue parse_simple_string(std::string input) {
-  std::string output = "";
-  for (int i = 1; i < input.length() - 2; i++) {
-    output += input[i];
+int find_crlf_index(std::string_view input) {
+  if (input.size() < 2) {
+    return -1;
   }
-  RespValue value;
-  value.type = simple_string;
-  value.value = output;
-  return value;
-}
-
-RespValue parse_bulk_string(std::string input) {
-  std::string len = "";
-  int startIndex;
-  for (int i = 1; i < input.length() - 2; i++) {
-    len += input[i];
-    if (input[i + 1] == '\r') {
-      startIndex = i + 3;
-      break;
+  for (int i = 0; i < input.size() - 1; i++) {
+    if (input[i] == '\r' && input[i + 1] == '\n') {
+      return i;
     }
   }
-  int lenInInt = std::stoi(len);
-  std::string output = "";
-  for (int i = startIndex; i < startIndex + lenInInt; i++) {
-    output += input[i];
-  }
-  RespValue value;
-  value.type = bulk_string;
-  value.value = output;
-  return value;
+  return -1;
 }
 
-RespValue parse_integer(std::string input) {
-  std::string output = "";
-  for (int i = 1; i < input.length() - 2; i++) {
-    output += input[i];
+// +string\r\n
+ParseResult parse_simple_string(std::string_view input) {
+
+  int crlf_index = find_crlf_index(input);
+
+  if (crlf_index == -1) {
+    LOG_INFO("Parse incomplete");
+    return parse_incomplete();
   }
-  RespValue value;
-  value.type = integer;
-  value.value = output;
-  return value;
+
+  std::string_view value = input.substr(1, crlf_index - 1);
+  RespValue resp_value;
+  resp_value.type = simple_string;
+  resp_value.value = std::string(value);
+  ParseResult parse_result;
+  parse_result.resp_value = resp_value;
+  parse_result.consumed = crlf_index + 2;
+
+  return parse_result;
 }
 
-RespValue parse_error(std::string input) {
-  std::string output = "";
-  for (int i = 1; i < input.length() - 2; i++) {
-    output += input[i];
+// $11\r\nbulk string\r\n
+ParseResult parse_bulk_string(std::string_view input) {
+  int crlf_index = find_crlf_index(input);
+
+  if (crlf_index == -1) {
+    LOG_INFO("Parse incomplete");
+    return parse_incomplete();
   }
-  RespValue value;
-  value.type = error;
-  value.value = output;
-  return value;
+
+  if (input.length() < crlf_index + 3) {
+    LOG_INFO("Parse incomplete");
+    return parse_incomplete();
+  }
+
+  int crlf_index_end = find_crlf_index(input.substr(crlf_index + 2));
+
+  if (crlf_index_end == -1) {
+    LOG_INFO("Parse incomplete");
+    return parse_incomplete();
+  }
+
+  int length;
+  auto from_chars_res =
+      std::from_chars(input.data() + 1, input.data() + crlf_index, length);
+  if (from_chars_res.ec != std::errc{}) {
+    LOG_ERROR("Failed to parse bulk string");
+    return parse_failed();
+  }
+  if (length < 0) {
+    LOG_ERROR("Failed to parse bulk string");
+    return parse_failed();
+  }
+
+  RespValue resp_value;
+  resp_value.value = std::string(input.substr(crlf_index + 2, crlf_index_end));
+
+  resp_value.type = bulk_string;
+
+  ParseResult parse_result;
+  parse_result.resp_value = resp_value;
+  parse_result.consumed = crlf_index + crlf_index_end + 4;
+
+  return parse_result;
 }
 
-RespValue parse_array(std::string input) {
-  std::vector<std::string> string_vec;
+// :integer\r\n
+ParseResult parse_integer(std::string_view input) {
+  int crlf_index = find_crlf_index(input);
 
-  // 1. Get array length
-  std::string array_length_string = "";
-  int current_index = 0;
-  for (int i = 1; i < input.length() - 2; i++) {
-    array_length_string += input[i];
-    if (input[i + 1] == '\r') {
-      current_index = i + 4;
-      break;
-    }
+  if (crlf_index == -1) {
+    LOG_INFO("Parse incomplete");
+    return parse_incomplete();
   }
-  int array_length = std::stoi(array_length_string);
 
-  // 2. For loop of array length
+  int value;
+  RespValue resp_value;
+  resp_value.type = integer;
+  auto from_chars_res =
+      std::from_chars(input.data() + 1, input.data() + crlf_index, value);
+
+  if (from_chars_res.ec != std::errc{}) {
+    LOG_ERROR("Failed to convert string to int");
+    return parse_failed();
+  }
+
+  resp_value.value = value;
+  ParseResult parse_result;
+  parse_result.resp_value = resp_value;
+  parse_result.consumed = crlf_index + 2;
+
+  return parse_result;
+}
+
+// -error\r\n
+ParseResult parse_error(std::string_view input) {
+  int crlf_index = find_crlf_index(input);
+
+  if (crlf_index == -1) {
+    LOG_INFO("Parse incomplete");
+    return parse_incomplete();
+  }
+
+  std::string_view value = input.substr(1, crlf_index - 1);
+  RespValue resp_value;
+  resp_value.type = error;
+  resp_value.value = std::string(value);
+  ParseResult parse_result;
+  parse_result.resp_value = resp_value;
+  parse_result.consumed = crlf_index + 2;
+
+  return parse_result;
+}
+
+// *2\r\n$5\r\nhello\r\n$5\r\nworld\r\n
+ParseResult parse_array(std::string_view input) {
+  int crlf_index = find_crlf_index(input);
+
+  if (crlf_index == -1) {
+    LOG_INFO("Parse incomplete");
+    return parse_incomplete();
+  }
+
+  int total_consumed = crlf_index + 2;
+
+  int array_length;
+  auto from_chars_res = std::from_chars(
+      input.data() + 1, input.data() + crlf_index, array_length);
+  if (from_chars_res.ec != std::errc{}) {
+    LOG_ERROR("Would not parse array");
+    return parse_failed();
+  }
+
+  input = input.substr(crlf_index + 2);
+
+  std::vector<std::shared_ptr<RespValue>> output_vector;
+
   for (int i = 0; i < array_length; i++) {
-    // 3. Get length of each section
-    std::string string_length_string = "";
-    for (int j = current_index; j < input.length() - 2; j++) {
-      string_length_string += input[j];
-      if (input[j + 1] == '\r') {
-        current_index += 3;
-        break;
-      }
-    }
-    int string_length = std::stoi(string_length_string);
-
-    // 4. Capture string
-    std::string output_string = "";
-    for (int j = current_index; j < current_index + string_length; j++) {
-      output_string += input[j];
-    }
-    string_vec.push_back(output_string);
-    current_index = current_index + string_length + 3;
-  }
-
-  std::vector<std::shared_ptr<RespValue>> output_vec;
-  for (int i = 0; i < string_vec.size(); i++) {
-    RespValue new_bulk_string;
-    new_bulk_string.type = bulk_string;
-    new_bulk_string.value = string_vec[i];
-    output_vec.push_back(std::make_shared<RespValue>(new_bulk_string));
-  }
-
-  RespValue output;
-  output.type = array;
-  output.value = output_vec;
-  return output;
-}
-
-RespValue parse_null() {
-  RespValue output;
-  output.type = null;
-  output.value = "";
-  return output;
-}
-
-RespValue parse_failed() {
-  RespValue output;
-  output.type = failed;
-  output.value = "";
-  return output;
-}
-
-ParseResult parse(std::string input) {
-  ParseResult result;
-  result.consumed = input.length();
-  switch (input[0]) {
-  case '$':
-    if (input[1] == '-') {
-      result.resp_value = parse_null();
-      return result;
+    ParseResult parse_result = parse(input);
+    total_consumed += parse_result.consumed;
+    if (parse_result.consumed == -1) {
+      return parse_failed();
+    } else if (parse_result.consumed == 0) {
+      return parse_incomplete();
     } else {
-      result.resp_value = parse_bulk_string(input);
-      return result;
+
+      output_vector.push_back(
+          std::make_shared<RespValue>(parse_result.resp_value));
+      input = input.substr(parse_result.consumed);
     }
-    break;
-  case '+':
-    result.resp_value = parse_simple_string(input);
-    return result;
-    break;
-  case '-':
-    result.resp_value = parse_error(input);
-    return result;
-    break;
-  case ':':
-    result.resp_value = parse_integer(input);
-    return result;
-    break;
-  case '*':
-    result.resp_value = parse_array(input);
-    return result;
-    break;
-  default:
-    LOG_ERROR("Couldn't pass");
-    result.resp_value = parse_failed();
-    return result;
-    break;
+  }
+  RespValue output_resp_value;
+  output_resp_value.value = output_vector;
+  output_resp_value.type = array;
+  ParseResult parse_result;
+  parse_result.resp_value = output_resp_value;
+  parse_result.consumed = total_consumed;
+  return parse_result;
+}
+
+// $-1\r\n
+ParseResult parse_null(std::string_view input) {
+  int crlf_index = find_crlf_index(input);
+
+  if (crlf_index == -1) {
+    LOG_INFO("Parse incomplete");
+    return parse_incomplete();
+  }
+
+  if (input.substr(0, 5) == "$-1\r\n") {
+    RespValue resp_value;
+    resp_value.type = null;
+    resp_value.value = "";
+    ParseResult parse_result;
+    parse_result.resp_value = resp_value;
+    parse_result.consumed = 5;
+    return parse_result;
+  } else {
+    return parse_failed();
+  }
+}
+
+ParseResult parse_incomplete() {
+  RespValue resp_value;
+  resp_value.type = incomplete;
+  resp_value.value = "";
+  ParseResult parse_result;
+  parse_result.consumed = 0;
+  parse_result.resp_value = resp_value;
+  return parse_result;
+}
+
+ParseResult parse_failed() {
+  RespValue resp_value;
+  resp_value.type = failed;
+  resp_value.value = "";
+  ParseResult parse_result;
+  parse_result.consumed = -1;
+  parse_result.resp_value = resp_value;
+  return parse_result;
+}
+
+ParseResult parse(std::string_view input) {
+  if (input.length() >= 1) {
+    switch (input[0]) {
+    case '$':
+      if (input.length() >= 2) {
+        if (input[1] == '-') {
+          return parse_null(input);
+        } else {
+          return parse_bulk_string(input);
+        }
+      } else {
+        return parse_incomplete();
+      }
+    case '+':
+      return parse_simple_string(input);
+    case '-':
+      return parse_error(input);
+    case ':':
+      return parse_integer(input);
+    case '*':
+      return parse_array(input);
+    default:
+      LOG_ERROR("Failed to parse");
+      return parse_failed();
+    }
+  } else {
+    return parse_incomplete();
   }
 }
