@@ -10,6 +10,6 @@ public:
   bool del(const std::string &key);
   bool exists(const std::string &key);
 
-protected:
+private:
   std::unordered_map<std::string, std::string> data;
 };
