@@ -15,21 +15,45 @@ std::string encode_simple_string(std::string input) {
 
 std::string encode_error(std::string input) { return "-" + input + "\r\n"; }
 
-std::string encode_integer(std::string input) { return ":" + input + "\r\n"; }
+std::string encode_integer(int input) {
+  return ":" + std::to_string(input) + "\r\n";
+}
 
 std::string encode_bulk_string(std::string input) {
   return "$" + std::to_string(input.length()) + "\r\n" + input + "\r\n";
 }
 
-std::string encode_array(std::vector<std::string> input) {
+std::string encode_null() { return "$-1\r\n"; }
+
+std::string encode_array(std::vector<std::shared_ptr<RespValue>> input);
+
+std::string serialize(RespValue resp_value) {
+  if (resp_value.type == simple_string) {
+    return encode_simple_string(std::get<std::string>(resp_value.value));
+  } else if (resp_value.type == bulk_string) {
+    return encode_bulk_string(std::get<std::string>(resp_value.value));
+  } else if (resp_value.type == integer) {
+    return encode_integer(std::get<int>(resp_value.value));
+  } else if (resp_value.type == error) {
+    return encode_error(std::get<std::string>(resp_value.value));
+  } else if (resp_value.type == null) {
+    return encode_null();
+  } else if (resp_value.type == array) {
+    return encode_array(
+        std::get<std::vector<std::shared_ptr<RespValue>>>(resp_value.value));
+  } else {
+    return "";
+  }
+}
+
+std::string encode_array(std::vector<std::shared_ptr<RespValue>> input) {
   std::string output = "*" + std::to_string(input.size()) + "\r\n";
+
   for (int i = 0; i < input.size(); i++) {
-    output += encode_bulk_string(input[i]);
+    output += serialize(*input[i]);
   }
   return output;
 }
-
-std::string encode_null() { return "$-1\r\n"; }
 
 int find_crlf_index(std::string_view input) {
   if (input.size() < 2) {
