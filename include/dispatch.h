@@ -13,4 +13,3 @@ RespValue handle_del(std::vector<std::string> args, Store &store);
 RespValue handle_exists(std::vector<std::string> args, Store &store);
 RespValue handle_incr(std::vector<std::string> args, Store &store);
 RespValue handle_decr(std::vector<std::string> args, Store &store);
-RespValue handle_incr(std::vector<std::string> args, Store &store);
