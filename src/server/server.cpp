@@ -1,5 +1,6 @@
 #include "../../include/server.h"
 #include "../../include/logger.h"
+#include "../../include/server_helpers.h"
 #include <cstring>
 #include <netdb.h>
 #include <sys/socket.h>
@@ -45,6 +46,8 @@ int Server::create() {
     return -1;
   }
 
+  set_nonblocking(fd);
+
   LOG_INFO("Server listening");
 
   return fd;
@@ -57,6 +60,8 @@ int Server::accept() {
     LOG_ERROR("Failed to accept client");
     return -1;
   }
+
+  set_nonblocking(client_fd);
 
   return client_fd;
 }

@@ -26,6 +26,7 @@ std::string Socket::read(int fd, size_t size) {
   ssize_t bytes_read = ::read(fd, buffer.data(), size);
   if (bytes_read == -1) {
     LOG_ERROR("Failed to read buffer");
+    return "";
   }
   buffer.resize(bytes_read);
   return buffer;
