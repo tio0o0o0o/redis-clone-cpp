@@ -2,7 +2,6 @@
 #include "../../include/logger.h"
 #include <charconv>
 #include <execution>
-#include <fmt/base.h>
 #include <memory>
 #include <string>
 #include <string_view>
