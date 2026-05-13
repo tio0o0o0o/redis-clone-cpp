@@ -1,6 +1,5 @@
 import socket
-from resp2 import *
-
+from python.resp2 import *
 
 class RedisClient:
     def __init__(self):
@@ -30,24 +29,24 @@ class RedisClient:
 if __name__ == "__main__":
     client = RedisClient()
     client.connect("127.0.0.1", 6969)
-    client.send_pipeline(
-        ["SET", "name", "Taiyo"],
-        ["SET", "age", "20"],
-        ["GET", "name"],
-        ["INCR", "age"],
-        ["GET", "name"],
-    )
-    print(client.read_response())
-    print(client.read_response())
-    print(client.read_response())
-    print(client.read_response())
-    print(client.read_response())
+    # client.send_pipeline(
+    #     ["SET", "name", "Taiyo"],
+    #     ["SET", "age", "20"],
+    #     ["GET", "name"],
+    #     ["INCR", "age"],
+    #     ["GET", "name"],
+    # )
+    # print(client.read_response())
+    # print(client.read_response())
+    # print(client.read_response())
+    # print(client.read_response())
+    # print(client.read_response())
+    # client.close()
+    while True:
+        line = input("> ")
+        if not line:
+            break
+        args = line.split()
+        client.send_command(*args)
+        print(client.read_response())
     client.close()
-    #    while True:
-    #        line = input("> ")
-    #        if not line:
-    #            break
-    #        args = line.split()
-    #        client.send_command(*args)
-    #        print(client.read_response())
-    #    client.close()

@@ -28,7 +28,7 @@ FetchContent_MakeAvailable(googletest)
 include_directories(include)
 
 # Main binary
-add_executable(server
+add_executable(redis_clone_server
   src/server/main.cpp
 )
 
@@ -36,7 +36,7 @@ add_library(resp2
   src/common/resp2.cpp
 )
 
-add_library(socket
+add_library(redis_socket
   src/common/socket.cpp
 )
 
@@ -48,7 +48,7 @@ add_library(server_lib
   src/server/server_event_loop.cpp
 )
 
-target_link_libraries(server PRIVATE server_lib resp2 socket)
+target_link_libraries(redis_clone_server PRIVATE server_lib resp2 redis_socket)
 
 # Testing binary
 enable_testing()
